@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Cartography</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #slider-container {
+            margin-top: 20px;
+        }
+        #metrics {
+            margin-top: 20px;
+        }
+        #user-input-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cloud Cartography: Social Network Visualization</h1>
+    <div id="user-input-container">
+        <label for="usernames">Enter usernames (comma-separated):</label>
+        <input type="text" id="usernames" placeholder="user1,user2,user3">
+        <button onclick="updateGraphWithUsernames()">Visualize</button>
+    </div>
+    <div id="graph-container" style="width: 100%; max-width: 800px;"></div>
+    <div id="slider-container">
+        <input type="range" id="slider" min="0" max="100" value="0" step="1">
+        <label for="slider">Timestamp</label>
+    </div>
+    <div id="metrics">
+        <p>Number of Edges: <span id="num-edges">0</span></p>
+        <p>Adjacency Matrix: <pre id="adj-matrix"></pre></p>
+        <p>Shortest Paths: <pre id="shortest-paths"></pre></p>
+    </div>
+    <script>
+        const slider = document.getElementById('slider');
+        const numEdges = document.getElementById('num-edges');
+        const adjMatrix = document.getElementById('adj-matrix');
+        const shortestPaths = document.getElementById('shortest-paths');
+
+        async function updateGraph(usernames, timestamp) {
+            const response = await fetch('/visualize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ usernames, timestamp })
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            Plotly.newPlot('graph-container', data.fig.data, data.fig.layout);
+            numEdges.textContent = data.num_edges;
+            adjMatrix.textContent = JSON.stringify(data.adj_matrix, null, 2);
+            shortestPaths.textContent = JSON.stringify(data.shortest_paths, null, 2);
+        }
+
+        function updateGraphWithUsernames() {
+            const usernamesInput = document.getElementById('usernames').value;
+            const usernames = usernamesInput.split(',').map(username => username.trim());
+            const timestamp = new Date(Date.UTC(2021, 0, 1) + slider.value * 1000).toISOString();
+            updateGraph(usernames, timestamp);
+        }
+
+        slider.addEventListener('input', (event) => {
+            const usernamesInput = document.getElementById('usernames').value;
+            const usernames = usernamesInput.split(',').map(username => username.trim());
+            const timestamp = new Date(Date.UTC(2021, 0, 1) + event.target.value * 1000).toISOString();
+            updateGraph(usernames, timestamp);
+        });
+
+        // Initialize the graph with the initial timestamp
+        updateGraphWithUsernames();
+    </script>
+</body>
+</html>
+
